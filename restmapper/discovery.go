@@ -220,6 +220,26 @@ func (d *DeferredDiscoveryRESTMapper) Reset() {
 	d.delegate = nil
 }
 
+// ResetGroup resets the internally cached Discovery information for
+// a single API group if possible, otherwise it fallbacks to Reset()
+// It will cause the next mapping request to re-discover that group.
+func (d *DeferredDiscoveryRESTMapper) ResetGroup(group string) {
+	klog.V(5).Info("Attempting to invalidate group discovery information", "group", group)
+
+	d.initMu.Lock()
+	defer d.initMu.Unlock()
+
+	cl, ok := d.cl.(discovery.CachedDiscoveryGroupInvalidatorInterface)
+	if ok {
+		klog.V(5).InfoS("Invalidating group discovery information", "group", group)
+		cl.InvalidateGroup(group)
+	} else {
+		klog.V(5).Info("Falling back to invalidating all groups")
+		cl.Invalidate()
+	}
+	d.delegate = nil
+}
+
 // KindFor takes a partial resource and returns back the single match.
 // It returns an error if there are multiple matches.
 func (d *DeferredDiscoveryRESTMapper) KindFor(resource schema.GroupVersionResource) (gvk schema.GroupVersionKind, err error) {

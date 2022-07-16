@@ -82,6 +82,15 @@ type CachedDiscoveryInterface interface {
 	Invalidate()
 }
 
+// CachedDiscoveryGroupInvalidatorInterface is a CachedDiscoveryInterface but it should also
+// let you invalidate a single API group.
+type CachedDiscoveryGroupInvalidatorInterface interface {
+	CachedDiscoveryInterface
+
+	// InvalidateGroup ensures that a paticular API group is invalidated.
+	InvalidateGroup(group string)
+}
+
 // ServerGroupsInterface has methods for obtaining supported groups on the API server
 type ServerGroupsInterface interface {
 	// ServerGroups returns the supported groups, with information like supported versions and the

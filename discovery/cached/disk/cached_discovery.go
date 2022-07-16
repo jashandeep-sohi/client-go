@@ -38,6 +38,12 @@ import (
 	restclient "k8s.io/client-go/rest"
 )
 
+const (
+	serverResourcesFilename = "serverresources.json"
+
+	serverGroupsFilename = "servergroups.json"
+)
+
 // CachedDiscoveryClient implements the functions that discovery server-supported API groups,
 // versions and resources.
 type CachedDiscoveryClient struct {
@@ -67,7 +73,7 @@ var _ discovery.CachedDiscoveryInterface = &CachedDiscoveryClient{}
 
 // ServerResourcesForGroupVersion returns the supported resources for a group and version.
 func (d *CachedDiscoveryClient) ServerResourcesForGroupVersion(groupVersion string) (*metav1.APIResourceList, error) {
-	filename := filepath.Join(d.cacheDirectory, groupVersion, "serverresources.json")
+	filename := filepath.Join(d.cacheDirectory, groupVersion, serverResourcesFilename)
 	cachedBytes, err := d.getCachedFile(filename)
 	// don't fail on errors, we either don't have a file or won't be able to run the cached check. Either way we can fallback.
 	if err == nil {
@@ -103,7 +109,7 @@ func (d *CachedDiscoveryClient) ServerGroupsAndResources() ([]*metav1.APIGroup, 
 // ServerGroups returns the supported groups, with information like supported versions and the
 // preferred version.
 func (d *CachedDiscoveryClient) ServerGroups() (*metav1.APIGroupList, error) {
-	filename := filepath.Join(d.cacheDirectory, "servergroups.json")
+	filename := filepath.Join(d.cacheDirectory, serverGroupsFilename)
 	cachedBytes, err := d.getCachedFile(filename)
 	// don't fail on errors, we either don't have a file or won't be able to run the cached check. Either way we can fallback.
 	if err == nil {
@@ -268,6 +274,28 @@ func (d *CachedDiscoveryClient) Invalidate() {
 	defer d.mutex.Unlock()
 
 	d.ourFiles = map[string]struct{}{}
+	d.fresh = true
+	d.invalidated = true
+	d.openapiClient = nil
+}
+
+// InvalidateGroup invalidates the cache for a single API group.
+func (d *CachedDiscoveryClient) InvalidateGroup(group string) {
+	d.mutex.Lock()
+	defer d.mutex.Unlock()
+
+	serverGroupsFilepath := filepath.Join(d.cacheDirectory, serverGroupsFilename)
+	delete(d.ourFiles, serverGroupsFilepath)
+
+	for f := range d.ourFiles {
+		matched, err := filepath.Match(filepath.Join(d.cacheDirectory, group, "*", serverResourcesFilename), f)
+
+		if matched || err != nil {
+			klog.V(5).Infof("invalidating file %v", f)
+			delete(d.ourFiles, f)
+		}
+	}
+
 	d.fresh = true
 	d.invalidated = true
 	d.openapiClient = nil

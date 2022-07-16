@@ -45,5 +45,5 @@ require (
 
 replace (
 	k8s.io/api => k8s.io/api v0.24.0
-	k8s.io/apimachinery => k8s.io/apimachinery v0.24.0
+	k8s.io/apimachinery => github.com/jashandeep-sohi/apimachinery v0.24.4-rc.0.0.20220716195151-9385d2d3e1c0
 )
